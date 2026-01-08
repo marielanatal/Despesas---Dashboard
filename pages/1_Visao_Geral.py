@@ -5,26 +5,48 @@ from utils.load_data import load_data
 from utils.load_faturamento import load_faturamento
 
 # =========================
-# FUNÇÕES DE FORMATAÇÃO
+# FORMATAÇÃO
 # =========================
 def format_brl(valor):
     return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-
-def format_mi(valor):
-    return f"R$ {valor/1_000_000:,.1f} mi".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def format_percent(valor):
     return f"{valor*100:+.1f}%"
 
 # =========================
-# CARREGAR DADOS
+# CSS (ANTI CORTE DE NÚMERO)
+# =========================
+st.markdown(
+    """
+    <style>
+    .kpi-box {
+        background-color: #f7f9fc;
+        padding: 18px;
+        border-radius: 12px;
+        text-align: center;
+        box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
+        white-space: nowrap;
+    }
+    .kpi-title {
+        font-size: 14px;
+        color: #6c757d;
+        margin-bottom: 4px;
+    }
+    .kpi-value {
+        font-size: 22px;
+        font-weight: 700;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# =========================
+# DADOS
 # =========================
 df_desp = load_data()
 df_fat = load_faturamento()
 
-# =========================
-# CONSOLIDAÇÃO ANUAL
-# =========================
 desp_2024 = df_desp[df_desp["ANO"] == 2024]["VALOR"].sum()
 desp_2025 = df_desp[df_desp["ANO"] == 2025]["VALOR"].sum()
 
@@ -43,30 +65,51 @@ var_res = (res_2025 - res_2024) / abs(res_2024) if res_2024 else 0
 # =========================
 st.markdown("## 📊 Visão Geral – Resultado do Negócio")
 st.markdown(
-    "Resumo consolidado de **Receita, Despesa e Resultado**, com análise comparativa "
+    "Resumo consolidado de **Receita, Despesa e Resultado**, com comparação "
     "entre 2024 (ano base) e 2025."
 )
 st.markdown("---")
 
 # =========================
-# KPIs
+# KPIs (VALOR INTEIRO)
 # =========================
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.metric("📈 Receita 2024", format_mi(fat_2024))
-    st.metric("📈 Receita 2025", format_mi(fat_2025))
-    st.caption(f"Variação: {format_percent(var_fat)}")
+    st.markdown(
+        f"""
+        <div class="kpi-box">
+            <div class="kpi-title">📈 Receita 2024</div>
+            <div class="kpi-value">{format_brl(fat_2024)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.caption(f"2025: {format_brl(fat_2025)} ({format_percent(var_fat)})")
 
 with c2:
-    st.metric("💸 Despesa 2024", format_mi(desp_2024))
-    st.metric("💸 Despesa 2025", format_mi(desp_2025))
-    st.caption(f"Variação: {format_percent(var_desp)}")
+    st.markdown(
+        f"""
+        <div class="kpi-box">
+            <div class="kpi-title">💸 Despesa 2024</div>
+            <div class="kpi-value">{format_brl(desp_2024)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.caption(f"2025: {format_brl(desp_2025)} ({format_percent(var_desp)})")
 
 with c3:
-    st.metric("💰 Resultado 2024", format_mi(res_2024))
-    st.metric("💰 Resultado 2025", format_mi(res_2025))
-    st.caption(f"Variação: {format_percent(var_res)}")
+    st.markdown(
+        f"""
+        <div class="kpi-box">
+            <div class="kpi-title">💰 Resultado 2024</div>
+            <div class="kpi-value">{format_brl(res_2024)}</div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    st.caption(f"2025: {format_brl(res_2025)} ({format_percent(var_res)})")
 
 st.markdown("---")
 
@@ -99,6 +142,8 @@ fig = px.line(
     }
 )
 
+fig.update_yaxes(tickformat=",.0f")
+
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
@@ -107,11 +152,11 @@ st.plotly_chart(fig, use_container_width=True)
 if res_2025 > res_2024:
     st.success(
         f"💡 O resultado do negócio **melhorou em {format_percent(var_res)}** em 2025, "
-        f"impulsionado por faturamento de {format_brl(fat_2025)} frente a despesas de "
-        f"{format_brl(desp_2025)}."
+        f"com faturamento total de {format_brl(fat_2025)} e despesas de {format_brl(desp_2025)}."
     )
 else:
     st.error(
-        f"⚠️ Apesar do faturamento de {format_brl(fat_2025)}, o resultado de 2025 "
-        f"foi inferior ao de 2024, pressionado pelo nível de despesas."
+        f"⚠️ O resultado de 2025 ficou abaixo de 2024, mesmo com faturamento de "
+        f"{format_brl(fat_2025)}, pressionado pelo nível de despesas."
     )
+
