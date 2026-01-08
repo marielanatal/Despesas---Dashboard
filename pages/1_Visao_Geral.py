@@ -14,27 +14,34 @@ def format_percent(valor):
     return f"{valor*100:+.1f}%"
 
 # =========================
-# CSS (ANTI CORTE DE NÚMERO)
+# CSS
 # =========================
 st.markdown(
     """
     <style>
     .kpi-box {
         background-color: #f7f9fc;
-        padding: 18px;
+        padding: 16px;
         border-radius: 12px;
         text-align: center;
         box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
-        white-space: nowrap;
     }
     .kpi-title {
-        font-size: 14px;
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 6px;
+    }
+    .kpi-year {
+        font-size: 13px;
         color: #6c757d;
-        margin-bottom: 4px;
     }
     .kpi-value {
         font-size: 22px;
         font-weight: 700;
+    }
+    .kpi-delta {
+        font-size: 13px;
+        margin-top: 6px;
     }
     </style>
     """,
@@ -65,56 +72,44 @@ var_res = (res_2025 - res_2024) / abs(res_2024) if res_2024 else 0
 # =========================
 st.markdown("## 📊 Visão Geral – Resultado do Negócio")
 st.markdown(
-    "Resumo consolidado de **Receita, Despesa e Resultado**, com comparação "
-    "entre 2024 (ano base) e 2025."
+    "Comparação direta entre **2024 (ano base)** e **2025**, considerando "
+    "Receita, Despesa e Resultado."
 )
 st.markdown("---")
 
 # =========================
-# KPIs (VALOR INTEIRO)
+# KPIs – 2024 x 2025
 # =========================
 c1, c2, c3 = st.columns(3)
 
-with c1:
-    st.markdown(
+def kpi(col, titulo, v24, v25, var):
+    col.markdown(
         f"""
         <div class="kpi-box">
-            <div class="kpi-title">📈 Receita 2024</div>
-            <div class="kpi-value">{format_brl(fat_2024)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.caption(f"2025: {format_brl(fat_2025)} ({format_percent(var_fat)})")
+            <div class="kpi-title">{titulo}</div>
 
-with c2:
-    st.markdown(
-        f"""
-        <div class="kpi-box">
-            <div class="kpi-title">💸 Despesa 2024</div>
-            <div class="kpi-value">{format_brl(desp_2024)}</div>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    st.caption(f"2025: {format_brl(desp_2025)} ({format_percent(var_desp)})")
+            <div class="kpi-year">2024</div>
+            <div class="kpi-value">{format_brl(v24)}</div>
 
-with c3:
-    st.markdown(
-        f"""
-        <div class="kpi-box">
-            <div class="kpi-title">💰 Resultado 2024</div>
-            <div class="kpi-value">{format_brl(res_2024)}</div>
+            <div class="kpi-year">2025</div>
+            <div class="kpi-value">{format_brl(v25)}</div>
+
+            <div class="kpi-delta">
+                Variação: {format_percent(var)}
+            </div>
         </div>
         """,
         unsafe_allow_html=True
     )
-    st.caption(f"2025: {format_brl(res_2025)} ({format_percent(var_res)})")
+
+kpi(c1, "📈 Receita", fat_2024, fat_2025, var_fat)
+kpi(c2, "💸 Despesa", desp_2024, desp_2025, var_desp)
+kpi(c3, "💰 Resultado", res_2024, res_2025, var_res)
 
 st.markdown("---")
 
 # =========================
-# EVOLUÇÃO MENSAL FATURAMENTO
+# EVOLUÇÃO MENSAL
 # =========================
 st.markdown("### 📈 Evolução Mensal do Faturamento")
 
@@ -145,18 +140,3 @@ fig = px.line(
 fig.update_yaxes(tickformat=",.0f")
 
 st.plotly_chart(fig, use_container_width=True)
-
-# =========================
-# LEITURA EXECUTIVA
-# =========================
-if res_2025 > res_2024:
-    st.success(
-        f"💡 O resultado do negócio **melhorou em {format_percent(var_res)}** em 2025, "
-        f"com faturamento total de {format_brl(fat_2025)} e despesas de {format_brl(desp_2025)}."
-    )
-else:
-    st.error(
-        f"⚠️ O resultado de 2025 ficou abaixo de 2024, mesmo com faturamento de "
-        f"{format_brl(fat_2025)}, pressionado pelo nível de despesas."
-    )
-
