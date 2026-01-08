@@ -14,26 +14,27 @@ def format_percent(valor):
     return f"{valor*100:+.1f}%"
 
 # =========================
-# CSS
+# CSS GLOBAL
 # =========================
 st.markdown(
     """
     <style>
     .kpi-box {
         background-color: #f7f9fc;
-        padding: 16px;
-        border-radius: 12px;
+        padding: 18px;
+        border-radius: 14px;
         text-align: center;
         box-shadow: 0px 2px 6px rgba(0,0,0,0.05);
     }
     .kpi-title {
-        font-size: 15px;
+        font-size: 16px;
         font-weight: 600;
-        margin-bottom: 6px;
+        margin-bottom: 8px;
     }
     .kpi-year {
         font-size: 13px;
         color: #6c757d;
+        margin-top: 6px;
     }
     .kpi-value {
         font-size: 22px;
@@ -41,7 +42,8 @@ st.markdown(
     }
     .kpi-delta {
         font-size: 13px;
-        margin-top: 6px;
+        margin-top: 8px;
+        color: #495057;
     }
     </style>
     """,
@@ -78,12 +80,12 @@ st.markdown(
 st.markdown("---")
 
 # =========================
-# KPIs – 2024 x 2025
+# KPIs
 # =========================
 c1, c2, c3 = st.columns(3)
 
-def kpi(col, titulo, v24, v25, var):
-    col.markdown(
+def render_kpi(col, titulo, v24, v25, var):
+    col.html(
         f"""
         <div class="kpi-box">
             <div class="kpi-title">{titulo}</div>
@@ -98,18 +100,17 @@ def kpi(col, titulo, v24, v25, var):
                 Variação: {format_percent(var)}
             </div>
         </div>
-        """,
-        unsafe_allow_html=True
+        """
     )
 
-kpi(c1, "📈 Receita", fat_2024, fat_2025, var_fat)
-kpi(c2, "💸 Despesa", desp_2024, desp_2025, var_desp)
-kpi(c3, "💰 Resultado", res_2024, res_2025, var_res)
+render_kpi(c1, "📈 Receita", fat_2024, fat_2025, var_fat)
+render_kpi(c2, "💸 Despesa", desp_2024, desp_2025, var_desp)
+render_kpi(c3, "💰 Resultado", res_2024, res_2025, var_res)
 
 st.markdown("---")
 
 # =========================
-# EVOLUÇÃO MENSAL
+# EVOLUÇÃO MENSAL FATURAMENTO
 # =========================
 st.markdown("### 📈 Evolução Mensal do Faturamento")
 
