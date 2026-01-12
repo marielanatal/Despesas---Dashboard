@@ -3,14 +3,14 @@ import plotly.graph_objects as go
 import pandas as pd
 
 # =========================
-# FORMATAÇÃO
+# FORMATAÇÃO (SEM ESCALA ERRADA)
 # =========================
 def format_percent(v):
-    return f"{v:.1f}%"
+    return f"{v:.2f}%"
 
 def format_pp(v):
     sinal = "+" if v > 0 else ""
-    return f"{sinal}{v:.1f} p.p."
+    return f"{sinal}{v:.2f} p.p."
 
 # =========================
 # CARREGAR DADOS
@@ -20,14 +20,14 @@ df = pd.read_excel("custo_transferencia_2024_2025.xlsx")
 # Normalizar colunas
 df.columns = df.columns.str.strip().str.upper()
 
-# Garantir coluna %
+# Garantir coluna percentual como "%"
 for col in df.columns:
     if "%" in col:
         df = df.rename(columns={col: "%"})
 
 # Normalizar dados
 df["MÊS"] = df["MÊS"].astype(str).str.strip().str.capitalize()
-df["ANO"] = df["ANO"].astype(int)
+df["ANO"] = pd.to_numeric(df["ANO"], errors="coerce")
 df["%"] = pd.to_numeric(df["%"], errors="coerce")
 
 # =========================
@@ -42,17 +42,16 @@ df = df[df["MÊS"].isin(ordem_meses)]
 df["MÊS"] = pd.Categorical(df["MÊS"], categories=ordem_meses, ordered=True)
 
 # =========================
-# PIVOT (CHAVE DA SOLUÇÃO)
+# PIVOT (MÊS x ANO)
 # =========================
 df_pivot = (
-    df
-    .pivot(index="MÊS", columns="ANO", values="%")
-    .reset_index()
-    .sort_values("MÊS")
+    df.pivot(index="MÊS", columns="ANO", values="%")
+      .reset_index()
+      .sort_values("MÊS")
 )
 
 # =========================
-# MÉDIAS (SOMENTE MAI–NOV)
+# MÉDIAS (VALOR REAL, EX: 17.12)
 # =========================
 media_2024 = df_pivot[2024].mean()
 media_2025 = df_pivot[2025].mean()
@@ -69,7 +68,7 @@ st.markdown(
 st.markdown("---")
 
 # =========================
-# KPIs
+# KPIs (VALOR REAL EM %)
 # =========================
 c1, c2, c3 = st.columns(3)
 
@@ -80,7 +79,7 @@ c3.metric("Diferença Média", format_pp(dif_pp))
 st.markdown("---")
 
 # =========================
-# GRÁFICO – BARRAS LADO A LADO (SEM EMPILHAR)
+# GRÁFICO – BARRAS LADO A LADO
 # =========================
 st.markdown("### 📊 Comparativo Mensal – 2024 x 2025")
 
@@ -91,7 +90,7 @@ fig.add_bar(
     y=df_pivot[2024],
     name="2024",
     marker_color="#cfe8ff",
-    text=[f"{v:.1f}%" for v in df_pivot[2024]],
+    text=[format_percent(v) for v in df_pivot[2024]],
     textposition="outside"
 )
 
@@ -100,40 +99,43 @@ fig.add_bar(
     y=df_pivot[2025],
     name="2025",
     marker_color="#1f4fd8",
-    text=[f"{v:.1f}%" for v in df_pivot[2025]],
+    text=[format_percent(v) for v in df_pivot[2025]],
     textposition="outside"
 )
 
 fig.update_layout(
-    barmode="group",   # 🔒 GARANTE LADO A LADO
+    barmode="group",
     yaxis_title="Percentual (%)",
     xaxis_title="Mês",
     legend_title="Ano",
-    bargap=0.25,
-    bargroupgap=0.1
+    bargap=0.25
 )
 
 fig.update_yaxes(
     ticksuffix="%",
-    range=[0, max(df_pivot[2024].max(), df_pivot[2025].max()) * 1.25]
+    range=[
+        0,
+        max(df_pivot[2024].max(), df_pivot[2025].max()) * 1.25
+    ]
 )
 
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# LEITURA EXECUTIVA
+# TABELA COMPARATIVA
 # =========================
-if dif_pp < 0:
-    st.success(
-        f"📉 O custo médio de transferência **reduziu** de "
-        f"{format_percent(media_2024)} em 2024 para "
-        f"{format_percent(media_2025)} em 2025 "
-        f"({format_pp(dif_pp)})."
-    )
-else:
-    st.error(
-        f"📈 O custo médio de transferência **aumentou** de "
-        f"{format_percent(media_2024)} em 2024 para "
-        f"{format_percent(media_2025)} em 2025 "
-        f"({format_pp(dif_pp)})."
-    )
+st.markdown("### 📋 Tabela Comparativa – Percentual por Mês")
+
+df_tabela = df_pivot.copy()
+df_tabela["Diferença (p.p.)"] = df_tabela[2025] - df_tabela[2024]
+
+df_tabela = df_tabela.rename(columns={
+    2024: "2024 (%)",
+    2025: "2025 (%)"
+})
+
+df_tabela["2024 (%)"] = df_tabela["2024 (%)"].map(format_percent)
+df_tabela["2025 (%)"] = df_tabela["2025 (%)"].map(format_percent)
+df_tabela["Diferença (p.p.)"] = df_tabela["Diferença (p.p.)"].map(format_pp)
+
+st.dataframe(df_tabela, use_container_width=True)
