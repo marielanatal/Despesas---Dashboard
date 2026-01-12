@@ -16,21 +16,30 @@ def format_pp(valor):
 # CARREGAR DADOS
 # =========================
 df = pd.read_excel("custo_transferencia_2024_2025.xlsx")
-df.columns = df.columns.str.strip()
 
-# Tipos
-df["ANO"] = df["ANO"].astype(int)
+# Normalizar nomes de colunas
+df.columns = df.columns.str.strip().str.upper()
+
+# Renomear coluna de percentual (qualquer variação vira "%")
+for col in df.columns:
+    if "%" in col:
+        df = df.rename(columns={col: "%"})
+
+# Normalizar conteúdo
+df["MÊS"] = (
+    df["MÊS"]
+    .astype(str)
+    .str.strip()
+    .str.capitalize()
+)
+
+df["ANO"] = pd.to_numeric(df["ANO"], errors="coerce")
 df["%"] = pd.to_numeric(df["%"], errors="coerce")
 
 # =========================
-# FILTRO DE MESES (MAIO–NOV)
+# MAPA DE MESES (ROBUSTO)
 # =========================
-meses_validos = ["Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro"]
-
-df = df[df["MÊS"].isin(meses_validos)]
-
-# Ordem correta dos meses
-ordem_meses = {
+mapa_meses = {
     "Maio": 5,
     "Junho": 6,
     "Julho": 7,
@@ -39,10 +48,14 @@ ordem_meses = {
     "Outubro": 10,
     "Novembro": 11
 }
-df["ordem_mes"] = df["MÊS"].map(ordem_meses)
+
+df["ordem_mes"] = df["MÊS"].map(mapa_meses)
+
+# Filtrar apenas meses válidos
+df = df[df["ordem_mes"].notna()]
 
 # =========================
-# MÉDIA POR ANO (SEGURO)
+# MÉDIA POR ANO
 # =========================
 media_ano = (
     df.groupby("ANO")["%"]
@@ -53,10 +66,10 @@ media_ano = (
 media_2024 = media_ano.loc[media_ano["ANO"] == 2024, "%"]
 media_2025 = media_ano.loc[media_ano["ANO"] == 2025, "%"]
 
-media_2024 = media_2024.values[0] if not media_2024.empty else 0
-media_2025 = media_2025.values[0] if not media_2025.empty else 0
+media_2024 = media_2024.values[0] if not media_2024.empty else None
+media_2025 = media_2025.values[0] if not media_2025.empty else None
 
-dif_pp = media_2025 - media_2024
+dif_pp = (media_2025 - media_2024) if media_2024 is not None and media_2025 is not None else 0
 
 # =========================
 # HEADER
@@ -73,14 +86,23 @@ st.markdown("---")
 # =========================
 c1, c2, c3 = st.columns(3)
 
-c1.metric("Média 2024 (Mai–Nov)", format_percent(media_2024))
-c2.metric("Média 2025 (Mai–Nov)", format_percent(media_2025))
-c3.metric("Diferença Média", format_pp(dif_pp))
+c1.metric(
+    "Média 2024 (Mai–Nov)",
+    format_percent(media_2024) if media_2024 is not None else "—"
+)
+c2.metric(
+    "Média 2025 (Mai–Nov)",
+    format_percent(media_2025) if media_2025 is not None else "—"
+)
+c3.metric(
+    "Diferença Média",
+    format_pp(dif_pp) if media_2024 is not None and media_2025 is not None else "—"
+)
 
 st.markdown("---")
 
 # =========================
-# GRÁFICO MENSAL
+# GRÁFICO
 # =========================
 st.markdown("### 📈 Evolução Mensal – Comparação 2024 x 2025")
 
@@ -108,10 +130,10 @@ fig.update_yaxes(ticksuffix="%")
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# ALERTA SE FALTAR DADO
+# ALERTA
 # =========================
-if media_2024 == 0 or media_2025 == 0:
+if media_2024 is None or media_2025 is None:
     st.warning(
-        "⚠️ Atenção: algum ano não possui todos os meses disponíveis "
-        "entre Maio e Novembro. A média foi calculada apenas com os dados existentes."
+        "⚠️ Não foram encontrados dados completos para ambos os anos "
+        "entre Maio e Novembro. Verifique a escrita dos meses e do ano na planilha."
     )
