@@ -3,32 +3,33 @@ import plotly.graph_objects as go
 import pandas as pd
 
 # =========================
-# FORMATAÇÃO (SEM ESCALA ERRADA)
+# FORMATAÇÃO
 # =========================
 def format_percent(v):
-    return f"{v:.2f}%"
+    return f"{v:.1f}%"
 
 def format_pp(v):
     sinal = "+" if v > 0 else ""
-    return f"{sinal}{v:.2f} p.p."
+    return f"{sinal}{v:.1f} p.p."
 
 # =========================
 # CARREGAR DADOS
 # =========================
 df = pd.read_excel("custo_transferencia_2024_2025.xlsx")
 
-# Normalizar colunas
 df.columns = df.columns.str.strip().str.upper()
 
-# Garantir coluna percentual como "%"
+# Garantir coluna %
 for col in df.columns:
     if "%" in col:
         df = df.rename(columns={col: "%"})
 
-# Normalizar dados
 df["MÊS"] = df["MÊS"].astype(str).str.strip().str.capitalize()
 df["ANO"] = pd.to_numeric(df["ANO"], errors="coerce")
 df["%"] = pd.to_numeric(df["%"], errors="coerce")
+
+# 🔴 AJUSTE DEFINITIVO DE ESCALA
+df["%"] = df["%"] * 100
 
 # =========================
 # ORDEM DOS MESES
@@ -42,7 +43,7 @@ df = df[df["MÊS"].isin(ordem_meses)]
 df["MÊS"] = pd.Categorical(df["MÊS"], categories=ordem_meses, ordered=True)
 
 # =========================
-# PIVOT (MÊS x ANO)
+# PIVOT
 # =========================
 df_pivot = (
     df.pivot(index="MÊS", columns="ANO", values="%")
@@ -51,7 +52,7 @@ df_pivot = (
 )
 
 # =========================
-# MÉDIAS (VALOR REAL, EX: 17.12)
+# MÉDIAS (AGORA EM % REAL)
 # =========================
 media_2024 = df_pivot[2024].mean()
 media_2025 = df_pivot[2025].mean()
@@ -68,10 +69,9 @@ st.markdown(
 st.markdown("---")
 
 # =========================
-# KPIs (VALOR REAL EM %)
+# KPIs
 # =========================
 c1, c2, c3 = st.columns(3)
-
 c1.metric("Média 2024 (Mai–Nov)", format_percent(media_2024))
 c2.metric("Média 2025 (Mai–Nov)", format_percent(media_2025))
 c3.metric("Diferença Média", format_pp(dif_pp))
@@ -139,3 +139,4 @@ df_tabela["2025 (%)"] = df_tabela["2025 (%)"].map(format_percent)
 df_tabela["Diferença (p.p.)"] = df_tabela["Diferença (p.p.)"].map(format_pp)
 
 st.dataframe(df_tabela, use_container_width=True)
+
