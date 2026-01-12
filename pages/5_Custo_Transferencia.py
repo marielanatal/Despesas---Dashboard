@@ -18,18 +18,18 @@ def format_pp(valor):
 df = pd.read_excel("custo_transferencia_2024_2025.xlsx")
 df.columns = df.columns.str.strip()
 
-# Padronizar tipos
+# Tipos
 df["ANO"] = df["ANO"].astype(int)
 df["%"] = pd.to_numeric(df["%"], errors="coerce")
 
 # =========================
-# FILTRAR MESES COMPARÁVEIS (MAIO A NOVEMBRO)
+# FILTRO DE MESES (MAIO–NOV)
 # =========================
 meses_validos = ["Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro"]
 
 df = df[df["MÊS"].isin(meses_validos)]
 
-# Garantir ordem correta dos meses no gráfico
+# Ordem correta dos meses
 ordem_meses = {
     "Maio": 5,
     "Junho": 6,
@@ -39,11 +39,10 @@ ordem_meses = {
     "Outubro": 10,
     "Novembro": 11
 }
-
 df["ordem_mes"] = df["MÊS"].map(ordem_meses)
 
 # =========================
-# MÉDIA POR ANO (SOMENTE MESES DISPONÍVEIS)
+# MÉDIA POR ANO (SEGURO)
 # =========================
 media_ano = (
     df.groupby("ANO")["%"]
@@ -51,8 +50,11 @@ media_ano = (
     .reset_index()
 )
 
-media_2024 = media_ano.loc[media_ano["ANO"] == 2024, "%"].values[0]
-media_2025 = media_ano.loc[media_ano["ANO"] == 2025, "%"].values[0]
+media_2024 = media_ano.loc[media_ano["ANO"] == 2024, "%"]
+media_2025 = media_ano.loc[media_ano["ANO"] == 2025, "%"]
+
+media_2024 = media_2024.values[0] if not media_2024.empty else 0
+media_2025 = media_2025.values[0] if not media_2025.empty else 0
 
 dif_pp = media_2025 - media_2024
 
@@ -62,12 +64,12 @@ dif_pp = media_2025 - media_2024
 st.markdown("## 🔄 Custo de Transferência – Análise Percentual")
 st.markdown(
     "Comparação do **percentual de custo de transferência** entre 2024 e 2025, "
-    "considerando **apenas os meses de Maio a Novembro**, disponíveis em ambos os anos."
+    "considerando **apenas os meses de Maio a Novembro**."
 )
 st.markdown("---")
 
 # =========================
-# KPIs (MÉDIA DO PERÍODO)
+# KPIs
 # =========================
 c1, c2, c3 = st.columns(3)
 
@@ -78,7 +80,7 @@ c3.metric("Diferença Média", format_pp(dif_pp))
 st.markdown("---")
 
 # =========================
-# GRÁFICO MÊS A MÊS
+# GRÁFICO MENSAL
 # =========================
 st.markdown("### 📈 Evolução Mensal – Comparação 2024 x 2025")
 
@@ -91,8 +93,8 @@ fig = px.line(
     color="ANO",
     markers=True,
     color_discrete_map={
-        2024: "#1f4fd8",  # azul escuro
-        2025: "#7fb3ff"   # azul claro
+        2024: "#1f4fd8",
+        2025: "#7fb3ff"
     },
     labels={
         "%": "Percentual (%)",
@@ -106,19 +108,10 @@ fig.update_yaxes(ticksuffix="%")
 st.plotly_chart(fig, use_container_width=True)
 
 # =========================
-# LEITURA EXECUTIVA
+# ALERTA SE FALTAR DADO
 # =========================
-if dif_pp < 0:
-    st.success(
-        f"📉 Considerando os meses de Maio a Novembro, o custo médio de transferência "
-        f"**reduziu de {format_percent(media_2024)} em 2024 para "
-        f"{format_percent(media_2025)} em 2025**, representando uma melhora de "
-        f"{format_pp(dif_pp)}."
-    )
-else:
-    st.error(
-        f"📈 Considerando os meses de Maio a Novembro, o custo médio de transferência "
-        f"**aumentou de {format_percent(media_2024)} em 2024 para "
-        f"{format_percent(media_2025)} em 2025**, com piora de "
-        f"{format_pp(dif_pp)}."
+if media_2024 == 0 or media_2025 == 0:
+    st.warning(
+        "⚠️ Atenção: algum ano não possui todos os meses disponíveis "
+        "entre Maio e Novembro. A média foi calculada apenas com os dados existentes."
     )
